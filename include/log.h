@@ -2,39 +2,35 @@
 #define LOG_H
 
 
+#include <stdbool.h>
 #include <stddef.h>
 
-
-#define VERBOSITY_STRING_LENGTH_MAX 16
-#define SEVERITY_STRING_LENGTH_MAX 8
-
-
-enum Verbosity
-{
-        QUIET,
-        VERBOSE
-};
 
 enum LogSeverity
 {
         LOG_NONE,
-        FATAL,
-        ERROR,
-        WARNING,
-        INFO,
-        DEBUG
+        LOG_FATAL,
+        LOG_ERROR,
+        LOG_WARNING,
+        LOG_INFO,
+        LOG_DEBUG
 };
 
 
-const enum LogSeverity LOG_SEVERITY_MIN;
-const enum LogSeverity LOG_SEVERITY_MAX;
+extern const enum LogSeverity LOG_SEVERITY_MIN;
+extern const enum LogSeverity LOG_SEVERITY_MAX;
 
 
-void logMessage(enum LogSeverity messageLevel, const char *formatString, ...);
-int initialiseLog(enum Verbosity mode, enum LogSeverity level, const char *filePath);
+void logMessage(enum LogSeverity level, const char *format, ...);
+
+int openLog(const char *filename);
 int closeLog(void);
 
-void getVerbosityString(char *dest, enum Verbosity verbosity, size_t n);
+void setLogVerbosity(bool verbosity);
+bool getLogVerbosity(void);
+void setLogLevel(enum LogSeverity level);
+enum LogSeverity getLogLevel(void);
+
 void getSeverityString(char *dest, enum LogSeverity severity, size_t n);
 
 

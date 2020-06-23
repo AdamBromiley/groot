@@ -1,178 +1,181 @@
 #include "log.h"
 
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 
 
-#define TIME_STRING_LENGTH_MAX 32
-#define LOG_MESSAGE_LENGTH_MAX 256
-#define LOG_ENTRY_LENGTH_MAX 512
+#define LOG_TIME_STR_LEN_MAX 32
+#define LOG_SEVERITY_STR_LEN_MAX 16
+#define LOG_MSG_LEN_MAX 256
+#define LOG_ENTRY_LEN_MAX 512
 
-#define RFC3339_TIME_FORMAT_STRING "%Y-%m-%d %H:%M:%S"
 
-
-/* Log severity range for user parameter checking */
+/* Log severity range for user-input error checking */
 const enum LogSeverity LOG_SEVERITY_MIN = LOG_NONE;
-const enum LogSeverity LOG_SEVERITY_MAX = DEBUG;
+const enum LogSeverity LOG_SEVERITY_MAX = LOG_DEBUG;
 
-
-/* Logging modes */
-static enum Verbosity verbose = QUIET;
-static enum LogSeverity loggingLevel = INFO;
 
 /* Log file */
-static FILE *logFile = NULL;
+static FILE *logfile = NULL;
+
+/* Logging modes */
+static bool verbose = 0;
+static enum LogSeverity loggingLevel = LOG_INFO;
 
 
-static void getTime(char *dest, size_t n);
+static void getRFC3339Time(char *dest, size_t n);
 
 
 /* Write to log */
-void logMessage(enum LogSeverity messageLevel, const char *formatString, ...)
+void logMessage(enum LogSeverity level, const char *format, ...)
 {
-    va_list formatArguments;
+    /* Full log entry */
+    char logEntry[LOG_ENTRY_LEN_MAX + 1];
 
-    char timeString[TIME_STRING_LENGTH_MAX + 1];
-    char severityString[SEVERITY_STRING_LENGTH_MAX + 1];
-    char message[LOG_MESSAGE_LENGTH_MAX + 1];
-    char logEntry[LOG_ENTRY_LENGTH_MAX + 1];
+    /* Log entry components */
+    char timeString[LOG_TIME_STR_LEN_MAX + 1];
+    char severityString[LOG_SEVERITY_STR_LEN_MAX + 1];
+    char message[LOG_MSG_LEN_MAX + 1];
+
+    va_list formatArguments;
     
     /* Ignore if there's nowhere to log to */
-    if (!logFile && verbose == QUIET)
+    if (!logfile && !verbose)
         return;
 
     /* Ignore if message not severe enough for the chosen logging level */
-    if (loggingLevel < messageLevel || loggingLevel == LOG_NONE)
+    if (loggingLevel < level || loggingLevel == LOG_NONE)
         return;
 
-    /* Get date and time in RFC 3339 format - YYYY-MM-DD hh:mm:ss */
-    getTime(timeString, sizeof(timeString));
-
-    /* Convert severity level to a string */
-    getSeverityString(severityString, messageLevel, sizeof(severityString));
+    getRFC3339Time(timeString, sizeof(timeString));
+    getSeverityString(severityString, level, sizeof(severityString));
 
     /* Read all arguments to logMessage() after the format string */
-    va_start(formatArguments, formatString);
-    vsnprintf(message, sizeof(message), formatString, formatArguments);
+    va_start(formatArguments, format);
+    vsnprintf(message, sizeof(message), format, formatArguments);
     va_end(formatArguments);
 
     /* Construct log message */
-    snprintf(logEntry, sizeof(logEntry), "[%s] %-*s %s\n", timeString, SEVERITY_STRING_LENGTH_MAX, severityString, message);
+    snprintf(logEntry, sizeof(logEntry), "[%s] %-*s %s\n", timeString, LOG_SEVERITY_STR_LEN_MAX, severityString, message);
 
     /* Write to log */
-    if (logFile)
-        fprintf(logFile, "%s", logEntry);
+    if (logfile)
+        fprintf(logfile, "%s", logEntry);
 
-    if (verbose == VERBOSE)
+    if (verbose)
         fprintf(stderr, "%s", logEntry);
 
     return;
 }
 
 
-/* Open log file */
-int initialiseLog(enum Verbosity mode, enum LogSeverity level, const char *filePath)
+/* Open logging file */
+int openLog(const char *filename)
 {
-    verbose = mode;
-    loggingLevel = level;
+    if (!filename)
+        return 1;
+    
+    logfile = fopen(filename, "a");
 
-    if (loggingLevel == LOG_NONE)
-        return 0;
+    if (!logfile)
+        return 1;
 
-    if (filePath)
-    {
-        logFile = fopen(filePath, "a");
-
-        if (!logFile)
-        {
-            logMessage(ERROR, "Log file could not be opened");
-            return 1;
-        }
-    }
-
-    logMessage(DEBUG, "Log file initialised");
     return 0;
 }
 
 
-/* Close log file */
+/* Close logging file */
 int closeLog(void)
 {
-    if (logFile)
-    {
-        logMessage(DEBUG, "Closing log file");
+    int r;
 
-        if (fclose(logFile))
-        {
-            logFile = NULL;
-            logMessage(ERROR, "Log file could not be closed");
-            return 1;
-        }
-
-        logFile = NULL;
-        logMessage(DEBUG, "Log file closed");
-    }
+    if (!logfile)
+        return 1;
     
+    r = fclose(logfile);
+    logfile = NULL;
+
+    if (r)
+        return 1;
+
     return 0;
 }
 
 
-/* Convert verbosity enum to a string */
-void getVerbosityString(char *dest, enum Verbosity verbosity, size_t n)
+/* Enable/disable logging to stderr */
+void setLogVerbosity(bool verbosity)
 {
-    const char *verbosityString;
-
-    switch (verbosity)
-    {
-        case QUIET:
-            verbosityString = "QUIET";
-            break;
-        case VERBOSE:
-            verbosityString = "VERBOSE";
-            break;
-        default:
-            verbosityString = "-";
-            break;
-    }
-
-    strncpy(dest, verbosityString, n);
-    dest[n - 1] = '\0';
-
+    if (verbosity)
+        verbose = 1;
+    else
+        verbose = 0;
+    
     return;
 }
 
 
-/* Convert severity level to a string */
+/* Get logging verbosity state */
+bool getLogVerbosity(void)
+{
+    return verbose;
+}
+
+
+/* Set the minimum logging level */
+void setLogLevel(enum LogSeverity level)
+{
+    if (level < LOG_SEVERITY_MIN)
+        loggingLevel = LOG_SEVERITY_MIN;
+    else if (level > LOG_SEVERITY_MAX)
+        loggingLevel = LOG_SEVERITY_MAX;
+    else
+        loggingLevel = level;
+    return;
+}
+
+
+/* Getting the minimum logging level */
+enum LogSeverity getLogLevel(void)
+{
+    return loggingLevel;
+}
+
+
+/* Convert severity level enum to a string */
 void getSeverityString(char *dest, enum LogSeverity severity, size_t n)
 {
-    const char *severityString;
+    const char *src;
 
     switch (severity)
     {
-        case DEBUG:
-            severityString = "DEBUG";
+        case LOG_NONE:
+            src = "NONE";
             break;
-        case INFO:
-            severityString = "INFO";
+        case LOG_DEBUG:
+            src = "DEBUG";
             break;
-        case WARNING:
-            severityString = "WARNING";
+        case LOG_INFO:
+            src = "INFO";
             break;
-        case ERROR:
-            severityString = "ERROR";
+        case LOG_WARNING:
+            src = "WARNING";
             break;
-        case FATAL:
-            severityString = "FATAL";
+        case LOG_ERROR:
+            src = "ERROR";
+            break;
+        case LOG_FATAL:
+            src = "FATAL";
             break;
         default:
-            severityString = "NONE";
+            src = "NONE";
             break;
     }
 
-    strncpy(dest, severityString, n);
+    strncpy(dest, src, n);
     dest[n - 1] = '\0';
 
     return;
@@ -180,13 +183,12 @@ void getSeverityString(char *dest, enum LogSeverity severity, size_t n)
 
 
 /* Get date and time in RFC 3339 format - YYYY-MM-DD hh:mm:ss */
-static void getTime(char *dest, size_t n)
+static void getRFC3339Time(char *dest, size_t n)
 {
-    time_t CURRENT_TIME = time(NULL);
-    struct tm *CURRENT_TIME_STRUCTURED = localtime(&CURRENT_TIME);
+    time_t currentTime = time(NULL);
+    struct tm *currentTimeStruct = localtime(&currentTime);
 
-    strftime(dest, n, RFC3339_TIME_FORMAT_STRING, CURRENT_TIME_STRUCTURED);
-
+    strftime(dest, n, "%Y-%m-%d %H:%M:%S", currentTimeStruct);
     dest[n - 1] = '\0';
 
     return;
