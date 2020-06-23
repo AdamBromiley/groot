@@ -16,7 +16,7 @@
 
 /* Log severity range for user-input error checking */
 const enum LogSeverity LOG_SEVERITY_MIN = LOG_NONE;
-const enum LogSeverity LOG_SEVERITY_MAX = LOG_DEBUG;
+const enum LogSeverity LOG_SEVERITY_MAX = DEBUG;
 
 
 /* Log file */
@@ -24,7 +24,7 @@ static FILE *logfile = NULL;
 
 /* Logging modes */
 static bool verbose = 0;
-static enum LogSeverity loggingLevel = LOG_INFO;
+static enum LogSeverity loggingLevel = INFO;
 
 
 static void getRFC3339Time(char *dest, size_t n);
@@ -155,19 +155,19 @@ void getSeverityString(char *dest, enum LogSeverity severity, size_t n)
         case LOG_NONE:
             src = "NONE";
             break;
-        case LOG_DEBUG:
+        case DEBUG:
             src = "DEBUG";
             break;
-        case LOG_INFO:
+        case INFO:
             src = "INFO";
             break;
-        case LOG_WARNING:
+        case WARNING:
             src = "WARNING";
             break;
-        case LOG_ERROR:
+        case ERROR:
             src = "ERROR";
             break;
-        case LOG_FATAL:
+        case FATAL:
             src = "FATAL";
             break;
         default:

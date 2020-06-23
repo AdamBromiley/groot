@@ -9,11 +9,11 @@
 enum LogSeverity
 {
         LOG_NONE,
-        LOG_FATAL,
-        LOG_ERROR,
-        LOG_WARNING,
-        LOG_INFO,
-        LOG_DEBUG
+        FATAL,
+        ERROR,
+        WARNING,
+        INFO,
+        DEBUG
 };
 
 
