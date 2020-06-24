@@ -23,7 +23,7 @@ const enum LogSeverity LOG_SEVERITY_MAX = DEBUG;
 static FILE *logfile = NULL;
 
 /* Logging modes */
-static bool verbose = 0;
+static bool verbose = false;
 static enum LogSeverity loggingLevel = INFO;
 
 
@@ -109,11 +109,7 @@ int closeLog(void)
 /* Enable/disable logging to stderr */
 void setLogVerbosity(bool verbosity)
 {
-    if (verbosity)
-        verbose = 1;
-    else
-        verbose = 0;
-    
+    verbose = verbosity;    
     return;
 }
 
