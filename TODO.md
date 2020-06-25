@@ -6,5 +6,4 @@
 - Time format customisation
 
 ## Miscellaneous
-- Add project license
 - Flesh out README.md
