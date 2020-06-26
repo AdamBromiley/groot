@@ -5,9 +5,9 @@
 
 
 # Output dynamic library
-_OUT = libgroot.so
+_OUT = groot
 OUTDIR = .
-OUT = $(OUTDIR)/$(_OUT)
+OUT = $(OUTDIR)/lib$(_OUT).so
 
 # Source code
 _SRC = log.c
@@ -23,6 +23,11 @@ DEPS = $(patsubst %,$(HDIR)/%,$(_DEPS))
 _OBJS = log.o
 ODIR = obj
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
+
+# Files to compile for testing/demonstration
+TOUT = groot_demo
+TDIR = test
+TEST = $(TDIR)/groot_demo.c $(HDIR)/log.h
 
 
 
@@ -60,14 +65,15 @@ LDFLAGS = $(LDLIBS) $(LDOPT) -shared
 
 
 
-.PHONY: all
+.PHONY: all demo
 all: $(OUT)
+demo: $(TOUT)
 
 
 
 
 # Compile source into object files
-$(OBJS): $(ODIR)/%.o: $(SDIR)/%.c
+$(OBJS): $(ODIR)/%.o: $(SDIR)/%.c $(DEPS)
 	@ mkdir -p $(ODIR)
 	$(CC) -c $< $(CFLAGS) -o $@
 
@@ -76,9 +82,16 @@ $(OUT): $(OBJS)
 	$(LD) $(OBJS) $(LDFLAGS) -o $(OUT)
 
 
+# Simple compile of demonstration script
+$(TOUT): all
+	$(CC) $(TEST) -L$(OUTDIR) -Wl,-rpath=$(OUTDIR) -l$(_OUT) $(CFLAGS) -o $(TOUT)
 
 
-.PHONY: clean
+
+
+.PHONY: clean clean-demo
 # Remove object files and dynamic library
 clean:
 	rm -f $(OBJS) $(OUT)
+clean-demo:
+	rm -f $(TOUT)
