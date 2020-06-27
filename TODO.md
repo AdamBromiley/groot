@@ -2,7 +2,8 @@
 
 ## New features
 - Entry structure customisation
-- Time format customisation
+- More time format customisation
+- Build static library in addition to the shared object
 
 ## Miscellaneous
-- Flesh out README.md
+- Flesh out README.md more
