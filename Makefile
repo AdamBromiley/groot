@@ -89,8 +89,9 @@ $(TOUT): all
 
 
 
-.PHONY: clean clean-demo
+.PHONY: clean-all clean clean-demo
 # Remove object files and dynamic library
+clean-all: clean clean-demo
 clean:
 	rm -f $(OBJS) $(OUT)
 clean-demo:
