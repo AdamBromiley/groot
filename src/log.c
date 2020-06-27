@@ -306,11 +306,11 @@ void getLogStartTimeString(char *dest, size_t n)
 /* Get time string for log */
 static void getTime(char *dest, enum LogTimeFormat format, size_t n)
 {
-    clock_t currentTicks;
-    float elapsedTime;
-
     time_t currentTime;
     struct tm *currentTimeStruct;
+
+    clock_t currentTicks;
+    float elapsedTime;
 
     /* Set in case of an error (just print a blank time) */
     dest[0] = '\0';
