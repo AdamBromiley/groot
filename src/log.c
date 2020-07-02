@@ -106,10 +106,9 @@ int closeLog(void)
 {
     int r;
 
-    if (!ctx.log)
-        return 1;
-    
-    r = fclose(ctx.log);
+    if (ctx.log)
+        r = fclose(ctx.log);
+
     ctx.log = NULL;
 
     if (r)
