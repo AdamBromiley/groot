@@ -104,17 +104,14 @@ int openLog(const char *filename)
 /* Close logging file */
 int closeLog(void)
 {
-    int r;
+    int r = 0;
 
     if (ctx.log)
         r = fclose(ctx.log);
 
     ctx.log = NULL;
 
-    if (r)
-        return 1;
-
-    return 0;
+    return (r) ? 1 : 0;
 }
 
 
