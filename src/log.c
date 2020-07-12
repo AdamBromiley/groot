@@ -8,11 +8,13 @@
 #include <time.h>
 
 
+/* Output buffer sizes */
 #define LOG_TIME_STR_LEN_MAX 32
 #define LOG_SEVERITY_STR_LEN_MAX 24
-#define LOG_MSG_LEN_MAX 256
-#define LOG_ENTRY_LEN_MAX 512
+#define LOG_MSG_STR_LEN_MAX 256
+#define LOG_ENTRY_STR_LEN_MAX 512
 
+/* Colour escape sequences */
 #define RESET_COLOUR "\033[0m"
 #define RED_BG_TXT "\033[37;41m"
 #define RED_TXT "\033[31m"
@@ -21,15 +23,27 @@
 #define CYAN_TXT "\033[36m"
 
 
+typedef struct LogCTX
+{
+    FILE *log;
+    bool verbose;
+    LogLevel level;
+    LogTimeFormat time;
+    time_t startTime;
+    clock_t referenceTicks;
+    bool colour;
+} LogCTX;
+
+
 /* Range of enums for user-input checking */
-const enum LogLevel LOG_SEVERITY_MIN = LOG_NONE;
-const enum LogLevel LOG_SEVERITY_MAX = DEBUG;
-const enum LogTimeFormat LOG_TIME_FORMAT_MIN = LOG_TIME_NONE;
-const enum LogTimeFormat LOG_TIME_FORMAT_MAX = LOG_TIME_RELATIVE;
+const LogLevel LOG_LEVEL_MIN = LOG_NONE;
+const LogLevel LOG_LEVEL_MAX = DEBUG;
+const LogTimeFormat LOG_TIME_FORMAT_MIN = LOG_TIME_NONE;
+const LogTimeFormat LOG_TIME_FORMAT_MAX = LOG_TIME_RELATIVE;
 
 
 /* Global log context, filled with default parameters */
-static struct LogParameters ctx =
+static LogCTX ctx =
 {
     .log = NULL,
     .verbose = false,
@@ -39,19 +53,22 @@ static struct LogParameters ctx =
 };
 
 
-static void getTime(char *dest, enum LogTimeFormat format, size_t n);
+static void getTime(char *dest, LogTimeFormat format, size_t n);
 
 
 /* Write to log */
-void logMessage(enum LogLevel level, const char *format, ...)
+void logMessage(LogLevel level, const char *format, ...)
 {
+    /* Number of spaces to right-pad message severity level */
+    const int LOG_LEVEL_STR_PADDING = 8;
+
     /* Full log entry */
-    char logEntry[LOG_ENTRY_LEN_MAX + 1];
+    char logEntry[LOG_ENTRY_STR_LEN_MAX];
 
     /* Log entry components */
-    char timeString[LOG_TIME_STR_LEN_MAX + 1];
-    char severityString[LOG_SEVERITY_STR_LEN_MAX + 1];
-    char message[LOG_MSG_LEN_MAX + 1];
+    char timeString[LOG_TIME_STR_LEN_MAX];
+    char severityString[LOG_SEVERITY_STR_LEN_MAX];
+    char message[LOG_MSG_STR_LEN_MAX];
 
     va_list formatArguments;
     
@@ -64,7 +81,12 @@ void logMessage(enum LogLevel level, const char *format, ...)
         return;
 
     getTime(timeString, ctx.time, sizeof(timeString));
-    getLogLevelString(severityString, level, sizeof(severityString));
+
+    if (getLogLevelString(severityString, level, sizeof(severityString)))
+    {
+        strncpy(severityString, "NONE", sizeof(severityString));
+        severityString[sizeof(severityString) - 1] = '\0';
+    }
 
     /* Read all arguments to logMessage() after the format string */
     va_start(formatArguments, format);
@@ -72,8 +94,7 @@ void logMessage(enum LogLevel level, const char *format, ...)
     va_end(formatArguments);
 
     /* Construct log message */
-    snprintf(logEntry, sizeof(logEntry), "%s %s %s\n", timeString,
-        severityString, message);
+    snprintf(logEntry, sizeof(logEntry), "%s %-*s %s\n", timeString, LOG_LEVEL_STR_PADDING, severityString, message);
 
     /* Write to log */
     if (ctx.log)
@@ -131,12 +152,12 @@ bool getLogVerbosity(void)
 
 
 /* Set the minimum logging level */
-void setLogLevel(enum LogLevel level)
+void setLogLevel(LogLevel level)
 {
-    if (level < LOG_SEVERITY_MIN)
-        ctx.level = LOG_SEVERITY_MIN;
-    else if (level > LOG_SEVERITY_MAX)
-        ctx.level = LOG_SEVERITY_MAX;
+    if (level < LOG_LEVEL_MIN)
+        ctx.level = LOG_LEVEL_MIN;
+    else if (level > LOG_LEVEL_MAX)
+        ctx.level = LOG_LEVEL_MAX;
     else
         ctx.level = level;
 
@@ -145,14 +166,14 @@ void setLogLevel(enum LogLevel level)
 
 
 /* Getting the minimum logging level */
-enum LogLevel getLogLevel(void)
+LogLevel getLogLevel(void)
 {
     return ctx.level;
 }
 
 
 /* Set the time string format */
-void setLogTimeFormat(enum LogTimeFormat format)
+void setLogTimeFormat(LogTimeFormat format)
 {
     if (format < LOG_TIME_FORMAT_MIN)
         ctx.time = LOG_TIME_FORMAT_MIN;
@@ -166,7 +187,7 @@ void setLogTimeFormat(enum LogTimeFormat format)
 
 
 /* Get the time string format */
-enum LogTimeFormat getLogTimeFormat(void)
+LogTimeFormat getLogTimeFormat(void)
 {
     return ctx.time;
 }
@@ -219,44 +240,43 @@ bool getLogColourMode(void)
 
 
 /* Convert LogLevel enum to a string */
-void getLogLevelString(char *dest, enum LogLevel level, size_t n)
+int getLogLevelString(char *dest, LogLevel level, size_t n)
 {
     const char *src;
 
     switch (level)
     {
         case LOG_NONE:
-            src = "NONE    ";
+            src = "NONE";
             break;
         case DEBUG:
-            src = (ctx.colour) ? CYAN_TXT "DEBUG   " RESET_COLOUR : "DEBUG   ";
+            src = (ctx.colour) ? CYAN_TXT "DEBUG" RESET_COLOUR : "DEBUG";
             break;
         case INFO:
-            src = (ctx.colour) ? GREEN_TXT "INFO    " RESET_COLOUR : "INFO    ";
+            src = (ctx.colour) ? GREEN_TXT "INFO" RESET_COLOUR : "INFO";
             break;
         case WARNING:
-            src = (ctx.colour) ? YELLOW_TXT "WARNING " RESET_COLOUR : "WARNING ";
+            src = (ctx.colour) ? YELLOW_TXT "WARNING" RESET_COLOUR : "WARNING";
             break;
         case ERROR:
-            src = (ctx.colour) ? RED_TXT "ERROR   " RESET_COLOUR : "ERROR   ";
+            src = (ctx.colour) ? RED_TXT "ERROR" RESET_COLOUR : "ERROR";
             break;
         case FATAL:
-            src = (ctx.colour) ? RED_BG_TXT "FATAL   " RESET_COLOUR : "FATAL   ";
+            src = (ctx.colour) ? RED_BG_TXT "FATAL" RESET_COLOUR : "FATAL";
             break;
         default:
-            src = "NONE    ";
-            break;
+            return 1;
     }
 
     strncpy(dest, src, n);
     dest[n - 1] = '\0';
 
-    return;
+    return 0;
 }
 
 
 /* Convert LogTimeFormat enum to a string */
-void getLogTimeFormatString(char *dest, enum LogTimeFormat format, size_t n)
+int getLogTimeFormatString(char *dest, LogTimeFormat format, size_t n)
 {
     const char *src;
 
@@ -272,35 +292,18 @@ void getLogTimeFormatString(char *dest, enum LogTimeFormat format, size_t n)
             src = "Relative";
             break;
         default:
-            src = "-";
-            break;
+            return 1;
     }
 
     strncpy(dest, src, n);
     dest[n - 1] = '\0';
 
-    return;
-}
-
-
-/* Convert reference time to a string */
-void getLogStartTimeString(char *dest, size_t n)
-{
-    struct tm *t = localtime(&(ctx.startTime));
-
-    if (t)
-        strftime(dest, n, "[%Y-%m-%d %H:%M:%S]", t);
-    else
-        strncpy(dest, "-", n);
-    
-    dest[n - 1] = '\0';
-
-    return;
+    return 0;
 }
 
 
 /* Get time string for log */
-static void getTime(char *dest, enum LogTimeFormat format, size_t n)
+static void getTime(char *dest, LogTimeFormat format, size_t n)
 {
     time_t currentTime;
     struct tm *currentTimeStruct;
