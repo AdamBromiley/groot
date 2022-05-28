@@ -102,8 +102,6 @@ void logMessage(LogLevel level, const char *format, ...)
 
     if (ctx.verbose)
         fprintf(stderr, "%s", logEntry);
-
-    return;
 }
 
 
@@ -139,8 +137,7 @@ int closeLog(void)
 /* Enable/disable logging to stderr */
 void setLogVerbosity(bool verbosity)
 {
-    ctx.verbose = verbosity;    
-    return;
+    ctx.verbose = verbosity;
 }
 
 
@@ -160,8 +157,6 @@ void setLogLevel(LogLevel level)
         ctx.level = LOG_LEVEL_MAX;
     else
         ctx.level = level;
-
-    return;
 }
 
 
@@ -181,8 +176,6 @@ void setLogTimeFormat(LogTimeFormat format)
         ctx.time = LOG_TIME_FORMAT_MAX;
     else
         ctx.time = format;
-
-    return;
 }
 
 
@@ -228,7 +221,6 @@ time_t getLogStartTime(void)
 void setLogColourMode(bool mode)
 {
     ctx.colour = mode;
-    return;
 }
 
 
@@ -336,6 +328,4 @@ static void getTime(char *dest, LogTimeFormat format, size_t n)
     }
     
     dest[n - 1] = '\0';
-
-    return;
 }
